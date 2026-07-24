@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Batch Management — UniProjectHub</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50" data-page="batch-management">
+
+  <!-- ADMIN SIDEBAR -->
+  <aside class="sidebar bg-white border-r border-slate-200 flex flex-col">
+    <div class="p-5 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-xs">ADM</div>
+        <div>
+          <div class="font-bold text-slate-900 text-sm">UniProjectHub</div>
+          <div class="text-xs text-violet-500 font-medium">Admin Panel</div>
+        </div>
+      </div>
+    </div>
+    <div class="p-4 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full bg-violet-500 flex items-center justify-center text-white font-semibold text-sm">A</div>
+        <div class="min-w-0 flex-1">
+          <div id="sidebar-user-name" class="font-semibold text-slate-800 text-sm truncate">Admin</div>
+          <div id="sidebar-user-dept" class="text-xs text-violet-500 font-medium">Administrator</div>
+        </div>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-0.5">
+      <a href="admin-dashboard.html"    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"><span>🏠</span> Dashboard</a>
+      <a href="batch-management.html"   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold bg-violet-50 text-violet-700"><span>📦</span> Batch Management</a>
+      <a href="metadata-management.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"><span>⚙️</span> Metadata</a>
+      <a href="analytics.html"          class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"><span>📊</span> Analytics</a>
+    </nav>
+    <div class="p-3 border-t border-slate-100">
+      <button id="logout-btn" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"><span>🚪</span> Logout</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <header class="bg-white border-b border-slate-200 px-8 py-5">
+      <h1 class="text-xl font-bold text-slate-900">Batch Management</h1>
+      <p class="text-sm text-slate-500 mt-0.5">Manage student batches and lab groups.</p>
+    </header>
+
+    <div class="p-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- ── Left: Batches ──────────────────────────────── -->
+        <div>
+          <div class="bg-white border border-slate-200 rounded-2xl p-6 mb-4">
+            <h2 class="font-semibold text-slate-800 mb-4">Add New Batch</h2>
+            <div class="flex gap-2">
+              <input id="new-batch-input" type="text" placeholder="e.g. CSE-18, EEE-19"
+                     class="flex-1 px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
+              <button id="add-batch-btn"
+                      class="bg-violet-500 hover:bg-violet-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+                + Add
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-white border border-slate-200 rounded-2xl p-6">
+            <h2 class="font-semibold text-slate-800 mb-4">All Batches</h2>
+            <div id="batches-list" class="space-y-2">
+              <!-- Loaded by admin.js -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Right: Lab Groups ──────────────────────────── -->
+        <div>
+          <div class="bg-white border border-slate-200 rounded-2xl p-6 mb-4">
+            <h2 class="font-semibold text-slate-800 mb-4">Add New Lab Group</h2>
+            <div class="space-y-3">
+              <select id="group-batch-select"
+                      class="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white">
+                <option value="">Select Batch</option>
+                <!-- Populated by admin.js -->
+              </select>
+              <div class="flex gap-2">
+                <input id="new-group-input" type="text" placeholder="e.g. Group A, G1, Lab-1"
+                       class="flex-1 px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
+                <button id="add-group-btn"
+                        class="bg-violet-500 hover:bg-violet-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+                  + Add
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white border border-slate-200 rounded-2xl p-6">
+            <h2 class="font-semibold text-slate-800 mb-4">All Lab Groups</h2>
+            <div id="groups-list" class="space-y-2">
+              <!-- Loaded by admin.js -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

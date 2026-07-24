@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — UniProjectHub</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="auth-page">
+
+  <div class="w-full max-w-lg py-8">
+
+    <!-- Logo -->
+    <div class="text-center mb-6">
+      <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-teal-500 rounded-2xl flex items-center justify-center text-white font-bold text-lg mx-auto mb-3">
+        UPH
+      </div>
+      <h1 class="text-xl font-bold text-slate-900">Create your account</h1>
+      <p class="text-slate-500 text-sm mt-1">Join UniProjectHub · BAIUST</p>
+    </div>
+
+    <!-- Registration Card -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+
+      <!-- Error Box -->
+      <div id="error-box" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-5"></div>
+
+      <div class="space-y-4">
+
+        <!-- Full Name -->
+        <div>
+          <label for="fullName" class="block text-sm font-medium text-slate-700 mb-1.5">Full Name *</label>
+          <input id="fullName" type="text" placeholder="e.g. Sadia Islam"
+                 class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+        </div>
+
+        <!-- University ID -->
+        <div>
+          <label for="universityId" class="block text-sm font-medium text-slate-700 mb-1.5">University ID *</label>
+          <input id="universityId" type="text" placeholder="e.g. 1118016"
+                 class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+        </div>
+
+        <!-- Email -->
+        <div>
+          <label for="email" class="block text-sm font-medium text-slate-700 mb-1.5">University Email *</label>
+          <input id="email" type="email" placeholder="e.g. sadia@mail.com"
+                 class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+        </div>
+
+        <!-- Department &amp; Batch (two columns) -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="department" class="block text-sm font-medium text-slate-700 mb-1.5">Department *</label>
+            <select id="department"
+                    class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-white">
+              <option value="">Select Department</option>
+              <option value="CSE">CSE</option>
+              <option value="EEE">EEE</option>
+              <option value="ME">ME</option>
+              <option value="CE">CE</option>
+              <option value="MBA">MBA</option>
+              <option value="BBA">BBA</option>
+            </select>
+          </div>
+          <div>
+            <label for="batch" class="block text-sm font-medium text-slate-700 mb-1.5">Batch *</label>
+            <input id="batch" type="text" placeholder="e.g. CSE-18"
+                   class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+          </div>
+        </div>
+
+        <!-- Lab Group -->
+        <div>
+          <label for="labGroup" class="block text-sm font-medium text-slate-700 mb-1.5">Lab Group</label>
+          <input id="labGroup" type="text" placeholder="e.g. G1"
+                 class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+        </div>
+
+        <!-- Password -->
+        <div>
+          <label for="password" class="block text-sm font-medium text-slate-700 mb-1.5">Password *</label>
+          <input id="password" type="password" placeholder="At least 6 characters"
+                 class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+        </div>
+
+        <!-- Confirm Password -->
+        <div>
+          <label for="confirmPassword" class="block text-sm font-medium text-slate-700 mb-1.5">Confirm Password *</label>
+          <input id="confirmPassword" type="password" placeholder="Type password again"
+                 class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+        </div>
+
+        <!-- Submit Button -->
+        <button id="register-btn"
+                class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors mt-2">
+          Create Account
+        </button>
+      </div>
+
+      <!-- Already have account -->
+      <p class="text-center text-sm text-slate-600 mt-5">
+        Already have an account?
+        <a href="login.html" class="text-green-600 font-semibold hover:underline ml-1">Sign in</a>
+      </p>
+    </div>
+
+    <p class="text-center text-xs text-slate-400 mt-4">
+      Bangladesh Army International University of Science &amp; Technology
+    </p>
+  </div>
+
+  <script type="module">
+    import { registerStudent, redirectIfLoggedIn, friendlyAuthError } from './js/auth.js';
+
+    // If already logged in, skip to dashboard
+    redirectIfLoggedIn();
+
+    document.getElementById('register-btn').addEventListener('click', async () => {
+      const fullName        = document.getElementById('fullName').value.trim();
+      const universityId    = document.getElementById('universityId').value.trim();
+      const email           = document.getElementById('email').value.trim();
+      const department      = document.getElementById('department').value;
+      const batch           = document.getElementById('batch').value.trim();
+      const labGroup        = document.getElementById('labGroup').value.trim();
+      const password        = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      const errorBox = document.getElementById('error-box');
+      errorBox.classList.add('hidden');
+
+      // ── Validation ──────────────────────────────────────────
+      if (!fullName || !universityId || !email || !department || !batch || !password) {
+        errorBox.textContent = 'Please fill in all required fields (marked with *).';
+        errorBox.classList.remove('hidden');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        errorBox.textContent = 'Passwords do not match.';
+        errorBox.classList.remove('hidden');
+        return;
+      }
+
+      if (password.length < 6) {
+        errorBox.textContent = 'Password must be at least 6 characters.';
+        errorBox.classList.remove('hidden');
+        return;
+      }
+
+      // ── Submit ──────────────────────────────────────────────
+      const btn = document.getElementById('register-btn');
+      btn.disabled    = true;
+      btn.textContent = 'Creating account…';
+
+      try {
+        await registerStudent({ fullName, universityId, email, department, batch, labGroup, password });
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        errorBox.textContent = friendlyAuthError(err);
+        errorBox.classList.remove('hidden');
+        btn.disabled    = false;
+        btn.textContent = 'Create Account';
+      }
+    });
+  </script>
+</body>
+</html>

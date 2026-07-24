@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Metadata Management — UniProjectHub</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50" data-page="metadata-management">
+
+  <!-- ADMIN SIDEBAR -->
+  <aside class="sidebar bg-white border-r border-slate-200 flex flex-col">
+    <div class="p-5 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-xs">ADM</div>
+        <div>
+          <div class="font-bold text-slate-900 text-sm">UniProjectHub</div>
+          <div class="text-xs text-violet-500 font-medium">Admin Panel</div>
+        </div>
+      </div>
+    </div>
+    <div class="p-4 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full bg-violet-500 flex items-center justify-center text-white font-semibold text-sm">A</div>
+        <div class="min-w-0 flex-1">
+          <div id="sidebar-user-name" class="font-semibold text-slate-800 text-sm truncate">Admin</div>
+          <div id="sidebar-user-dept" class="text-xs text-violet-500 font-medium">Administrator</div>
+        </div>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-0.5">
+      <a href="admin-dashboard.html"    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"><span>🏠</span> Dashboard</a>
+      <a href="batch-management.html"   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"><span>📦</span> Batch Management</a>
+      <a href="metadata-management.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold bg-violet-50 text-violet-700"><span>⚙️</span> Metadata</a>
+      <a href="analytics.html"          class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"><span>📊</span> Analytics</a>
+    </nav>
+    <div class="p-3 border-t border-slate-100">
+      <button id="logout-btn" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"><span>🚪</span> Logout</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <header class="bg-white border-b border-slate-200 px-8 py-5">
+      <h1 class="text-xl font-bold text-slate-900">Metadata Management</h1>
+      <p class="text-sm text-slate-500 mt-0.5">Manage categories, review tags, and tech stacks used across projects.</p>
+    </header>
+
+    <div class="p-8">
+
+      <!-- Tab Bar -->
+      <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+
+        <div class="border-b border-slate-200 px-6 flex gap-1">
+          <button id="meta-tab-categories" class="px-4 py-3 text-sm font-semibold text-violet-700 border-b-2 border-violet-500 bg-white -mb-px">
+            🏷️ Categories
+          </button>
+          <button id="meta-tab-tags" class="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
+            ⭐ Review Tags
+          </button>
+          <button id="meta-tab-techstacks" class="px-4 py-3 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
+            💻 Tech Stacks
+          </button>
+        </div>
+
+        <!-- ── CATEGORIES Panel ─────────────────────────── -->
+        <div id="meta-panel-categories" class="p-6">
+          <div class="flex gap-2 mb-5">
+            <input id="new-category-input" type="text" placeholder="e.g. IoT, Web Development, AI"
+                   class="flex-1 px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
+            <button id="add-category-btn"
+                    class="bg-violet-500 hover:bg-violet-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+              + Add
+            </button>
+          </div>
+          <div id="cats-list">
+            <!-- Loaded by admin.js -->
+          </div>
+        </div>
+
+        <!-- ── REVIEW TAGS Panel ────────────────────────── -->
+        <div id="meta-panel-tags" class="p-6 hidden">
+          <div class="flex gap-2 mb-5">
+            <input id="new-tag-input" type="text" placeholder="e.g. Beginner Friendly, Research Oriented"
+                   class="flex-1 px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
+            <button id="add-tag-btn"
+                    class="bg-violet-500 hover:bg-violet-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+              + Add
+            </button>
+          </div>
+          <div id="tags-list">
+            <!-- Loaded by admin.js -->
+          </div>
+        </div>
+
+        <!-- ── TECH STACKS Panel ────────────────────────── -->
+        <div id="meta-panel-techstacks" class="p-6 hidden">
+          <div class="flex gap-2 mb-5">
+            <input id="new-tech-input" type="text" placeholder="e.g. Firebase, TensorFlow, Arduino"
+                   class="flex-1 px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
+            <button id="add-tech-btn"
+                    class="bg-violet-500 hover:bg-violet-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+              + Add
+            </button>
+          </div>
+          <div id="tech-list">
+            <!-- Loaded by admin.js -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Help box -->
+      <div class="mt-5 bg-blue-50 border border-blue-200 rounded-2xl p-5">
+        <h3 class="font-semibold text-blue-900 text-sm mb-1">ℹ️ How Metadata Works</h3>
+        <ul class="text-xs text-blue-700 space-y-1 list-disc list-inside">
+          <li><strong>Categories</strong> help students classify their projects (e.g. IoT, Web Dev, AI).</li>
+          <li><strong>Review Tags</strong> appear in final project reviews to help future students know what to expect.</li>
+          <li><strong>Tech Stacks</strong> appear as selectable chips when creating projects and in the similarity engine.</li>
+        </ul>
+      </div>
+
+    </div>
+  </main>
+
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Project — UniProjectHub</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar bg-white border-r border-slate-200 flex flex-col">
+    <div class="p-5 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-gradient-to-br from-green-400 to-teal-500 rounded-xl flex items-center justify-center text-white font-bold text-xs">UPH</div>
+        <div>
+          <div class="font-bold text-slate-900 text-sm">UniProjectHub</div>
+          <div class="text-xs text-slate-400">BAIUST</div>
+        </div>
+      </div>
+    </div>
+    <div class="p-4 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <div id="sidebar-avatar" class="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-sm">S</div>
+        <div class="min-w-0 flex-1">
+          <div id="sidebar-user-name" class="font-semibold text-slate-800 text-sm truncate">Loading…</div>
+          <div id="sidebar-user-dept" class="text-xs text-slate-400 truncate">—</div>
+        </div>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-0.5">
+      <a href="dashboard.html"       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"><span>🏠</span> Dashboard</a>
+      <a href="browse-projects.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"><span>🔍</span> Browse Projects</a>
+      <a href="my-projects.html"     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold bg-green-50 text-green-700"><span>📁</span> My Projects</a>
+      <a href="profile.html"         class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"><span>👤</span> Profile</a>
+    </nav>
+    <div class="p-3 border-t border-slate-100">
+      <button id="logout-btn" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"><span>🚪</span> Logout</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- Page Header -->
+    <header class="bg-white border-b border-slate-200 px-8 py-5">
+      <div class="flex items-center gap-3">
+        <a href="my-projects.html" class="text-slate-400 hover:text-slate-700 text-sm">← Back</a>
+        <span class="text-slate-300">|</span>
+        <div>
+          <h1 class="text-xl font-bold text-slate-900">Create New Project</h1>
+          <p class="text-sm text-slate-500 mt-0.5">Start a new project and discover similar ones instantly.</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="p-8">
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+        <!-- ── LEFT: Create Form (3/5 width) ─────────────── -->
+        <div class="lg:col-span-3">
+          <div class="bg-white border border-slate-200 rounded-2xl p-7">
+            <h2 class="font-bold text-slate-800 mb-6">Project Details</h2>
+
+            <form id="create-form" class="space-y-5">
+
+              <!-- Project Name (REQUIRED) -->
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Project Name <span class="text-red-500">*</span>
+                </label>
+                <input id="project-name" type="text"
+                       placeholder="e.g. Smart Attendance System using Face Recognition"
+                       class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 transition-shadow">
+                <p class="text-xs text-slate-400 mt-1">Be specific. A good name makes discovery easier.</p>
+              </div>
+
+              <!-- Description (REQUIRED) -->
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Description <span class="text-red-500">*</span>
+                </label>
+                <textarea id="description" rows="6"
+                          placeholder="Describe what your project does, the problem it solves, how it works, and what makes it unique…"
+                          class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 transition-shadow resize-none"></textarea>
+                <p class="text-xs text-slate-400 mt-1">💡 The similarity engine reads this to find related projects.</p>
+              </div>
+
+              <!-- Category (Optional) -->
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Category <span class="text-slate-400 font-normal">(optional)</span>
+                </label>
+                <select id="category"
+                        class="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-white">
+                  <option value="">Select a category</option>
+                  <!-- Populated by create-project.js -->
+                </select>
+              </div>
+
+              <!-- Tech Stack (Optional) -->
+              <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">
+                  Tech Stack <span class="text-slate-400 font-normal">(optional — click to select)</span>
+                </label>
+                <div id="tech-options" class="flex flex-wrap gap-2">
+                  <!-- Chip buttons populated by create-project.js -->
+                  <span class="text-xs text-slate-400 italic">Loading tech options…</span>
+                </div>
+              </div>
+
+              <!-- Submit -->
+              <div class="flex items-center gap-3 pt-2">
+                <button type="submit" id="submit-btn"
+                        class="bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-2.5 rounded-xl text-sm transition-colors">
+                  Create Project →
+                </button>
+                <a href="my-projects.html" class="text-sm text-slate-500 hover:text-slate-700">Cancel</a>
+              </div>
+
+            </form>
+          </div>
+        </div>
+
+        <!-- ── RIGHT: Similar Projects Panel (2/5 width) ──── -->
+        <div class="lg:col-span-2">
+
+          <!-- Info Card -->
+          <div class="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-4">
+            <div class="text-2xl mb-2">🔍</div>
+            <h3 class="font-bold text-blue-900 text-sm mb-1">Live Similarity Detection</h3>
+            <p class="text-xs text-blue-700 leading-relaxed">
+              As you type, UniProjectHub automatically scans all existing projects and shows the most similar ones.
+              This helps avoid duplication and lets you learn from what others have already built.
+            </p>
+          </div>
+
+          <!-- Similar Projects Panel (hidden until results appear) -->
+          <div id="similar-panel" class="hidden bg-white border border-amber-200 rounded-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center gap-2">
+              <span class="text-amber-500 text-lg">⚠️</span>
+              <div>
+                <h3 class="font-bold text-amber-900 text-sm">Similar Projects Found</h3>
+                <p class="text-xs text-amber-700">Review before creating — click any to open.</p>
+              </div>
+            </div>
+            <!-- Results -->
+            <div id="similar-body" class="p-4 space-y-3">
+              <!-- Populated by create-project.js -->
+            </div>
+          </div>
+
+          <!-- Guidelines -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-5 mt-4">
+            <h3 class="font-semibold text-slate-700 text-sm mb-3">📋 Required Fields</h3>
+            <div class="space-y-2 text-xs text-slate-500">
+              <div class="flex items-center gap-2">
+                <span class="text-red-500">●</span>
+                <span><strong>Project Name</strong> — unique, descriptive title</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-red-500">●</span>
+                <span><strong>Description</strong> — what, why, how</span>
+              </div>
+              <div class="flex items-center gap-2 text-slate-400">
+                <span>○</span>
+                <span>Category — helps with filtering</span>
+              </div>
+              <div class="flex items-center gap-2 text-slate-400">
+                <span>○</span>
+                <span>Tech Stack — improves similarity matching</span>
+              </div>
+            </div>
+            <p class="text-xs text-slate-400 mt-4">
+              Projects are visible immediately. You can always add more details from the project page.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="js/create-project.js"></script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — UniProjectHub</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50">
+
+  <!-- ══════════════════════════════════════════
+       SIDEBAR
+  ═══════════════════════════════════════════ -->
+  <aside class="sidebar bg-white border-r border-slate-200 flex flex-col">
+
+    <!-- Logo -->
+    <div class="p-5 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-gradient-to-br from-green-400 to-teal-500 rounded-xl flex items-center justify-center text-white font-bold text-xs shadow-sm">UPH</div>
+        <div>
+          <div class="font-bold text-slate-900 text-sm">UniProjectHub</div>
+          <div class="text-xs text-slate-400">BAIUST</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Info -->
+    <div class="p-4 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <div id="sidebar-avatar" class="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-sm">S</div>
+        <div class="min-w-0 flex-1">
+          <div id="sidebar-user-name" class="font-semibold text-slate-800 text-sm truncate">Loading…</div>
+          <div id="sidebar-user-dept" class="text-xs text-slate-400 truncate">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 p-3 space-y-0.5">
+      <a href="dashboard.html"       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold bg-green-50 text-green-700">
+        <span class="text-base">🏠</span> Dashboard
+      </a>
+      <a href="browse-projects.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+        <span class="text-base">🔍</span> Browse Projects
+      </a>
+      <a href="my-projects.html"     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+        <span class="text-base">📁</span> My Projects
+      </a>
+      <a href="profile.html"         class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+        <span class="text-base">👤</span> Profile
+      </a>
+    </nav>
+
+    <!-- Logout -->
+    <div class="p-3 border-t border-slate-100">
+      <button id="logout-btn" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors">
+        <span class="text-base">🚪</span> Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- ══════════════════════════════════════════
+       MAIN CONTENT
+  ═══════════════════════════════════════════ -->
+  <main class="main-content">
+
+    <!-- Page Header -->
+    <header class="bg-white border-b border-slate-200 px-8 py-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-slate-900">
+            Hello, <span id="welcome-name">Student</span> 👋
+          </h1>
+          <p class="text-sm text-slate-500 mt-0.5">Welcome back to your project hub.</p>
+        </div>
+        <a href="create-project.html"
+           class="bg-green-500 hover:bg-green-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors flex items-center gap-2">
+          <span>＋</span> New Project
+        </a>
+      </div>
+    </header>
+
+    <div class="p-8">
+
+      <!-- ── Stats Row ─────────────────────────────────── -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+          <div class="text-3xl mb-1">📁</div>
+          <div id="stat-projects" class="text-2xl font-bold text-slate-900">—</div>
+          <div class="text-sm text-slate-500 mt-0.5">My Projects</div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+          <div class="text-3xl mb-1">🤝</div>
+          <div id="stat-contributions" class="text-2xl font-bold text-slate-900">—</div>
+          <div class="text-sm text-slate-500 mt-0.5">Contributions</div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+          <div class="text-3xl mb-1">🔗</div>
+          <div id="stat-resources" class="text-2xl font-bold text-slate-900">—</div>
+          <div class="text-sm text-slate-500 mt-0.5">Resources Added</div>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-5">
+          <div class="text-3xl mb-1">⭐</div>
+          <div id="stat-reviews" class="text-2xl font-bold text-slate-900">—</div>
+          <div class="text-sm text-slate-500 mt-0.5">Final Reviews</div>
+        </div>
+
+      </div>
+
+      <!-- ── Two-column grid ───────────────────────────── -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left: Department Projects (2/3 width) -->
+        <div class="lg:col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-bold text-slate-800">Recent in Your Department</h2>
+            <a href="browse-projects.html" class="text-sm text-green-600 hover:underline font-medium">View All →</a>
+          </div>
+          <div id="dept-projects" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Loaded by dashboard.js -->
+          </div>
+        </div>
+
+        <!-- Right: Sidebar column (1/3 width) -->
+        <div class="space-y-6">
+
+          <!-- My Recent Projects -->
+          <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-sm font-bold text-slate-800">My Recent Projects</h2>
+              <a href="my-projects.html" class="text-xs text-green-600 hover:underline">See all</a>
+            </div>
+            <div id="my-recent-projects" class="space-y-3">
+              <!-- Loaded by dashboard.js -->
+            </div>
+          </div>
+
+          <!-- Popular Projects -->
+          <div class="bg-white border border-slate-200 rounded-xl p-5">
+            <h2 class="text-sm font-bold text-slate-800 mb-4">🔥 Popular Projects</h2>
+            <div id="popular-projects" class="space-y-3">
+              <!-- Loaded by dashboard.js -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- end p-8 -->
+  </main>
+
+  <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

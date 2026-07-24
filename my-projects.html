@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Projects — UniProjectHub</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar bg-white border-r border-slate-200 flex flex-col">
+    <div class="p-5 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-gradient-to-br from-green-400 to-teal-500 rounded-xl flex items-center justify-center text-white font-bold text-xs">UPH</div>
+        <div>
+          <div class="font-bold text-slate-900 text-sm">UniProjectHub</div>
+          <div class="text-xs text-slate-400">BAIUST</div>
+        </div>
+      </div>
+    </div>
+    <div class="p-4 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <div id="sidebar-avatar" class="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-sm">S</div>
+        <div class="min-w-0 flex-1">
+          <div id="sidebar-user-name" class="font-semibold text-slate-800 text-sm truncate">Loading…</div>
+          <div id="sidebar-user-dept" class="text-xs text-slate-400 truncate">—</div>
+        </div>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-0.5">
+      <a href="dashboard.html"       class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"><span>🏠</span> Dashboard</a>
+      <a href="browse-projects.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"><span>🔍</span> Browse Projects</a>
+      <a href="my-projects.html"     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold bg-green-50 text-green-700"><span>📁</span> My Projects</a>
+      <a href="profile.html"         class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"><span>👤</span> Profile</a>
+    </nav>
+    <div class="p-3 border-t border-slate-100">
+      <button id="logout-btn" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"><span>🚪</span> Logout</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- Page Header -->
+    <header class="bg-white border-b border-slate-200 px-8 py-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-slate-900">My Projects</h1>
+          <p class="text-sm text-slate-500 mt-0.5">Projects you created or joined as a team member.</p>
+        </div>
+        <a href="create-project.html"
+           class="bg-green-500 hover:bg-green-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors flex items-center gap-2">
+          <span>＋</span> Create New Project
+        </a>
+      </div>
+    </header>
+
+    <div class="p-8">
+      <!-- Project List -->
+      <div id="my-projects-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <!-- Loaded by JS below -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module">
+    import { requireAuth, getCurrentUserData, logoutUser } from './js/auth.js';
+    import { getUserProjects } from './js/firestore.js';
+    import { showLoading, showEmpty, renderSidebarUser,
+             truncate, techBadge, progressBar, timeAgo } from './js/utils.js';
+
+    async function init() {
+      try {
+        const user     = await requireAuth();
+        const userData = await getCurrentUserData(user.uid);
+
+        renderSidebarUser(userData);
+        document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+        showLoading('my-projects-list');
+        const projects = await getUserProjects(user.uid);
+        renderProjects(projects, user.uid);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderProjects(projects, uid) {
+      const grid = document.getElementById('my-projects-list');
+
+      if (projects.length === 0) {
+        showEmpty('my-projects-list',
+          'You have no projects yet.',
+          'Click "Create New Project" to get started!');
+        return;
+      }
+
+      grid.innerHTML = projects.map(p => {
+        const isLeader = p.members?.some(m => m.uid === uid && m.isLeader);
+        const techHtml = (p.techStack || []).slice(0, 3).map(techBadge).join('');
+
+        return `
+          <div class="bg-white border border-slate-200 rounded-xl p-5 flex flex-col card-hover">
+            <!-- Top -->
+            <div class="flex items-start gap-2 mb-2">
+              <div class="flex-1 min-w-0">
+                <h3 class="font-bold text-slate-800 text-sm leading-snug mb-0.5">${p.name}</h3>
+                <span class="text-xs ${isLeader ? 'text-green-600 bg-green-50 border border-green-200' : 'text-blue-600 bg-blue-50 border border-blue-200'} px-2 py-0.5 rounded-md font-medium">
+                  ${isLeader ? '👑 Leader' : '🤝 Member'}
+                </span>
+              </div>
+              <span class="text-xs text-slate-400 whitespace-nowrap">${timeAgo(p.updatedAt)}</span>
+            </div>
+
+            <!-- Description -->
+            <p class="text-xs text-slate-500 mb-3 flex-1 line-clamp-2">${truncate(p.description, 100)}</p>
+
+            <!-- Tech Stack -->
+            <div class="flex flex-wrap gap-1 mb-3">${techHtml}</div>
+
+            <!-- Progress -->
+            <div class="mb-3">${progressBar(p.completionPercent)}</div>
+
+            <!-- Team -->
+            <div class="flex items-center gap-1 mb-4">
+              ${(p.members || []).slice(0, 5).map(m => `
+                <div class="w-6 h-6 rounded-full bg-slate-300 border-2 border-white flex items-center justify-center text-xs text-white font-medium" title="${m.name}">
+                  ${(m.name || 'U').charAt(0)}
+                </div>
+              `).join('')}
+              ${(p.members || []).length > 5 ? `<span class="text-xs text-slate-400">+${p.members.length - 5}</span>` : ''}
+              <span class="text-xs text-slate-400 ml-1">${(p.members || []).length} member(s)</span>
+            </div>
+
+            <!-- Open Button -->
+            <a href="project.html?id=${p.id}"
+               class="w-full text-center bg-green-500 hover:bg-green-600 text-white text-xs font-semibold py-2.5 rounded-lg transition-colors">
+              Open Project →
+            </a>
+          </div>
+        `;
+      }).join('');
+    }
+
+    init();
+  </script>
+</body>
+</html>
