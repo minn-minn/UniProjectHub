@@ -9,15 +9,19 @@
 </head>
 <body class="bg-slate-50 flex items-center justify-center min-h-screen">
 
+  <!-- Shown briefly while checking login state -->
   <div class="text-center">
-    <div class="w-60 h-12 bg-gradient-to-br from-green-400 to-teal-500 rounded-2xl flex items-center justify-center text-white font-bold text-lg mx-auto mb-4">
-      UniProjectHub
+    <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-teal-500 rounded-2xl flex items-center justify-center text-white font-bold text-lg mx-auto mb-4">
+      UPH
     </div>
     <div class="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
     <p class="text-slate-400 text-sm mt-3">Loading UniProjectHub…</p>
   </div>
 
   <script type="module">
+    // ── Check if user is already logged in ───────────────────
+    // If yes  → go to dashboard (or admin panel)
+    // If no   → go to login page
     import { auth } from './js/firebase.js';
     import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js';
     import { getUser } from './js/firestore.js';

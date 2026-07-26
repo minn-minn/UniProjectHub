@@ -9,7 +9,7 @@ import {
   getActivities, createActivity, updateActivity, deleteActivity, recalcProgress,
   getNotes, createNote, updateNote, deleteNote,
   getResources, createResource, deleteResource,
-  getReviews, getUserReview, createReview, updateReview,
+  getReviews, createReview, updateReview,
   searchStudents
 } from './firestore.js';
 import { findSimilarProjects } from './similarity.js';
@@ -17,7 +17,7 @@ import {
   showToast, showLoading, showEmpty, renderSidebarUser,
   formatDate, techBadge, tagBadge,
   progressBar, getAvatarColor, getQueryParam, isValidUrl,
-  confirmAction, debounce
+  confirmAction, debounce, escapeHtml, describeError
 } from './utils.js';
 
 let project     = null;
@@ -34,6 +34,21 @@ const _noteCache = new Map();
 // Store student search results by UID so addMemberHandler can look them up
 // (avoids putting names with apostrophes inside onclick attribute strings)
 const _memberSearchCache = new Map();
+
+// Store activities by ID so edit/delete handlers get the real title
+// instead of one squeezed through an onclick="" attribute
+const _activityCache = new Map();
+
+// Safe refresh: reload a tab's list after a write. If the reload
+// itself fails, we say so honestly instead of claiming the save failed.
+async function refreshList(loader, renderer, listElementId, label) {
+  try {
+    renderer(await loader());
+  } catch (err) {
+    showEmpty(listElementId, `Saved, but could not reload ${label}.`, 'Refresh the page to see it.');
+    showToast(describeError(err, `Could not reload ${label}.`), 'error');
+  }
+}
 
 // ── Start ────────────────────────────────────────────────────
 async function init() {
@@ -203,8 +218,8 @@ function renderTeamList() {
       <div class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl">
         <div class="w-10 h-10 rounded-full ${color} flex items-center justify-center text-white font-semibold">${initial}</div>
         <div class="flex-1 min-w-0">
-          <p class="font-semibold text-sm text-slate-800">${m.name}</p>
-          <p class="text-xs text-slate-400">${m.universityId || ''} ${m.isLeader ? '· 👑 Leader' : ''}</p>
+          <p class="font-semibold text-sm text-slate-800">${escapeHtml(m.name)}</p>
+          <p class="text-xs text-slate-400">${escapeHtml(m.universityId) || ''} ${m.isLeader ? '· 👑 Leader' : ''}</p>
         </div>
         ${canRemove ? `
           <button onclick="removeMemberHandler('${m.uid}')"
@@ -241,8 +256,8 @@ function renderStudentSearchResults(results) {
         ${u.fullName.charAt(0).toUpperCase()}
       </div>
       <div>
-        <p class="text-sm font-medium text-slate-800">${u.fullName}</p>
-        <p class="text-xs text-slate-400">${u.universityId} · ${u.department}</p>
+        <p class="text-sm font-medium text-slate-800">${escapeHtml(u.fullName)}</p>
+        <p class="text-xs text-slate-400">${escapeHtml(u.universityId)} · ${escapeHtml(u.department)}</p>
       </div>
     </div>
   `).join('');
@@ -265,7 +280,7 @@ window.addMemberHandler = async (uid) => {
     _memberSearchCache.clear();
     showToast(`${name} added to team!`);
   } catch (err) {
-    showToast('Failed to add member.', 'error');
+    showToast(describeError(err, 'Failed to add member.'), 'error');
   }
 };
 
@@ -280,7 +295,7 @@ window.removeMemberHandler = async (uid) => {
     renderTeamList();
     showToast('Member removed.');
   } catch (err) {
-    showToast('Failed to remove member.', 'error');
+    showToast(describeError(err, 'Failed to remove member.'), 'error');
   }
 };
 
@@ -294,10 +309,9 @@ async function loadTimeline() {
   if (addSection) addSection.classList.toggle('hidden', !isMember);
 
   try {
-    const activities = await getActivities(projectId);
-    renderTimeline(activities);
+    renderTimeline(await getActivities(projectId));
   } catch (err) {
-    showEmpty('timeline-list', 'Could not load activities.');
+    showEmpty('timeline-list', 'Could not load activities.', describeError(err, ''));
   }
 
   // Use onclick (not addEventListener) so revisiting the tab doesn't stack up listeners
@@ -307,22 +321,28 @@ async function loadTimeline() {
     const title = input?.value.trim();
     if (!title) { showToast('Enter an activity title.', 'error'); return; }
 
+    addActivityBtn.disabled = true;
     try {
       await createActivity(projectId, title, currentUser.uid);
       input.value = '';
-      const activities = await getActivities(projectId);
-      renderTimeline(activities);
-      await recalcProgress(projectId);
       showToast('Activity added!');
     } catch (err) {
-      showToast('Failed to add activity.', 'error');
+      showToast(describeError(err, 'Failed to add activity.'), 'error');
+      addActivityBtn.disabled = false;
+      return;
     }
+    addActivityBtn.disabled = false;
+    await refreshList(() => getActivities(projectId), renderTimeline, 'timeline-list', 'activities');
+    recalcProgress(projectId).catch(e => console.warn('progress not saved:', e));
   };
 }
 
 function renderTimeline(activities) {
   const list = document.getElementById('timeline-list');
   if (!list) return;
+
+  _activityCache.clear();
+  activities.forEach(a => _activityCache.set(a.id, a));
 
   // Update progress display
   const done  = activities.filter(a => a.completed).length;
@@ -347,11 +367,11 @@ function renderTimeline(activities) {
         <span class="text-lg flex-shrink-0">${a.completed ? '✅' : '⬜'}</span>
       `}
       <!-- Title -->
-      <span class="flex-1 text-sm ${a.completed ? 'line-through text-slate-400' : 'text-slate-700'}">${a.title}</span>
+      <span class="flex-1 text-sm ${a.completed ? 'line-through text-slate-400' : 'text-slate-700'}">${escapeHtml(a.title)}</span>
       <!-- Actions (only for members) -->
       ${isMember ? `
         <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onclick="editActivity('${a.id}', '${a.title.replace(/'/g, "\\'")}')"
+          <button onclick="editActivity('${a.id}')"
                   class="text-xs text-slate-400 hover:text-blue-600 px-2 py-1 rounded hover:bg-blue-50">Edit</button>
           <button onclick="delActivity('${a.id}')"
                   class="text-xs text-slate-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50">Delete</button>
@@ -364,25 +384,31 @@ function renderTimeline(activities) {
 window.toggleActivity = async (id, completed) => {
   try {
     await updateActivity(id, { completed });
-    const activities = await getActivities(projectId);
-    renderTimeline(activities);
-    await recalcProgress(projectId);
   } catch (err) {
-    showToast('Failed to update.', 'error');
+    showToast(describeError(err, 'Failed to update.'), 'error');
+    return;
   }
+  await refreshList(() => getActivities(projectId), renderTimeline, 'timeline-list', 'activities');
+  recalcProgress(projectId).catch(e => console.warn('progress not saved:', e));
 };
 
-window.editActivity = async (id, currentTitle) => {
-  const newTitle = prompt('Edit activity:', currentTitle);
-  if (!newTitle || newTitle === currentTitle) return;
+window.editActivity = async (id) => {
+  const activity = _activityCache.get(id);
+  if (!activity) { showToast('Activity not found. Refresh the page.', 'error'); return; }
+
+  const newTitle = prompt('Edit activity:', activity.title);
+  if (newTitle === null) return;
+  const trimmed = newTitle.trim();
+  if (!trimmed || trimmed === activity.title) return;
+
   try {
-    await updateActivity(id, { title: newTitle });
-    const activities = await getActivities(projectId);
-    renderTimeline(activities);
+    await updateActivity(id, { title: trimmed });
     showToast('Updated!');
   } catch (err) {
-    showToast('Failed to update.', 'error');
+    showToast(describeError(err, 'Failed to update.'), 'error');
+    return;
   }
+  await refreshList(() => getActivities(projectId), renderTimeline, 'timeline-list', 'activities');
 };
 
 window.delActivity = async (id) => {
@@ -390,13 +416,13 @@ window.delActivity = async (id) => {
   if (!ok) return;
   try {
     await deleteActivity(id);
-    const activities = await getActivities(projectId);
-    renderTimeline(activities);
-    await recalcProgress(projectId);
     showToast('Deleted.');
   } catch (err) {
-    showToast('Failed to delete.', 'error');
+    showToast(describeError(err, 'Failed to delete.'), 'error');
+    return;
   }
+  await refreshList(() => getActivities(projectId), renderTimeline, 'timeline-list', 'activities');
+  recalcProgress(projectId).catch(e => console.warn('progress not saved:', e));
 };
 
 // ============================================================
@@ -409,10 +435,9 @@ async function loadNotes() {
   if (addSection) addSection.classList.toggle('hidden', !isMember);
 
   try {
-    const notes = await getNotes(projectId);
-    renderNotes(notes);
+    renderNotes(await getNotes(projectId));
   } catch (err) {
-    showEmpty('notes-list', 'Could not load notes.');
+    showEmpty('notes-list', 'Could not load notes.', describeError(err, ''));
   }
 
   // Use onclick so revisiting the tab doesn't stack up listeners
@@ -437,12 +462,12 @@ function renderNotes(notes) {
   list.innerHTML = notes.map(n => `
     <div class="bg-white border border-slate-200 rounded-xl p-5">
       <div class="flex items-start justify-between gap-2 mb-2">
-        <h4 class="font-semibold text-slate-800">${n.title}</h4>
+        <h4 class="font-semibold text-slate-800">${escapeHtml(n.title)}</h4>
         <span class="text-xs text-slate-400">${formatDate(n.createdAt)}</span>
       </div>
-      <p class="text-sm text-slate-600 whitespace-pre-wrap mb-3">${n.content}</p>
+      <p class="text-sm text-slate-600 whitespace-pre-wrap mb-3">${escapeHtml(n.content)}</p>
       <div class="flex items-center justify-between">
-        <span class="text-xs text-slate-400">By ${n.createdByName || '—'}</span>
+        <span class="text-xs text-slate-400">By ${escapeHtml(n.createdByName) || '—'}</span>
         ${(isMember && n.createdBy === currentUser.uid) ? `
           <div class="flex gap-2">
             <button onclick="editNote('${n.id}')"
@@ -464,10 +489,10 @@ function showNoteModal(noteId = null, existingTitle = '', existingContent = '') 
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
       <h3 class="font-semibold text-slate-800 mb-4">${noteId ? 'Edit Note' : 'Add Note'}</h3>
       <input id="note-title" type="text" placeholder="Note title"
-             value="${existingTitle}"
+             value="${escapeHtml(existingTitle)}"
              class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-green-400">
       <textarea id="note-content" rows="5" placeholder="Write your note here..."
-                class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-green-400 resize-none">${existingContent}</textarea>
+                class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-green-400 resize-none">${escapeHtml(existingContent)}</textarea>
       <div class="flex gap-3">
         <button id="note-cancel" class="flex-1 py-2.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50">Cancel</button>
         <button id="note-save"   class="flex-1 py-2.5 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600">Save Note</button>
@@ -481,6 +506,11 @@ function showNoteModal(noteId = null, existingTitle = '', existingContent = '') 
     const title   = document.getElementById('note-title').value.trim();
     const content = document.getElementById('note-content').value.trim();
     if (!title || !content) { showToast('Fill in both fields.', 'error'); return; }
+
+    const saveBtn = document.getElementById('note-save');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
     try {
       if (noteId) {
         await updateNote(noteId, { title, content });
@@ -488,12 +518,14 @@ function showNoteModal(noteId = null, existingTitle = '', existingContent = '') 
         await createNote(projectId, title, content, currentUser.uid, userData.fullName);
       }
       modal.remove();
-      const notes = await getNotes(projectId);
-      renderNotes(notes);
       showToast('Note saved!');
     } catch (err) {
-      showToast('Failed to save note.', 'error');
+      showToast(describeError(err, 'Failed to save note.'), 'error');
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Note';
+      return;
     }
+    await refreshList(() => getNotes(projectId), renderNotes, 'notes-list', 'notes');
   };
 }
 
@@ -504,10 +536,14 @@ window.editNote = (id) => {
 window.delNote  = async (id) => {
   const ok = await confirmAction('Delete this note?');
   if (!ok) return;
-  await deleteNote(id);
-  const notes = await getNotes(projectId);
-  renderNotes(notes);
-  showToast('Deleted.');
+  try {
+    await deleteNote(id);
+    showToast('Deleted.');
+  } catch (err) {
+    showToast(describeError(err, 'Failed to delete note.'), 'error');
+    return;
+  }
+  await refreshList(() => getNotes(projectId), renderNotes, 'notes-list', 'notes');
 };
 
 // ============================================================
@@ -520,10 +556,9 @@ async function loadResources() {
   if (addSection) addSection.classList.toggle('hidden', !isMember);
 
   try {
-    const resources = await getResources(projectId);
-    renderResources(resources);
+    renderResources(await getResources(projectId));
   } catch (err) {
-    showEmpty('resources-list', 'Could not load resources.');
+    showEmpty('resources-list', 'Could not load resources.', describeError(err, ''));
   }
 
   // Use onclick so revisiting the tab doesn't stack up listeners
@@ -558,15 +593,15 @@ function renderResources(resources) {
           <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
             <td class="py-3 px-3">
               <span class="inline-flex items-center gap-1 text-xs text-slate-600">
-                ${RESOURCE_ICONS[r.type] || '🔗'} ${r.type}
+                ${RESOURCE_ICONS[r.type] || '🔗'} ${escapeHtml(r.type)}
               </span>
             </td>
             <td class="py-3 px-3">
-              <a href="${r.url}" target="_blank" rel="noopener"
-                 class="font-medium text-blue-600 hover:underline">${r.name}</a>
+              <a href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer"
+                 class="font-medium text-blue-600 hover:underline">${escapeHtml(r.name)}</a>
             </td>
-            <td class="py-3 px-3 hidden md:table-cell text-slate-500 text-xs">${r.description || '—'}</td>
-            <td class="py-3 px-3 text-slate-400 text-xs">${r.createdByName || '—'}</td>
+            <td class="py-3 px-3 hidden md:table-cell text-slate-500 text-xs">${escapeHtml(r.description) || '—'}</td>
+            <td class="py-3 px-3 text-slate-400 text-xs">${escapeHtml(r.createdByName) || '—'}</td>
             <td class="py-3 px-3">
               ${(isMember && r.createdBy === currentUser.uid) ? `
                 <div class="flex gap-1">
@@ -618,26 +653,36 @@ function showResourceModal() {
     if (!name) { showToast('Name is required.', 'error'); return; }
     if (!url || !isValidUrl(url)) { showToast('Enter a valid URL.', 'error'); return; }
 
+    const saveBtn = document.getElementById('res-save');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Adding…';
+
     try {
       await createResource(projectId, { type, name, url, description: desc },
                            currentUser.uid, userData.fullName);
       modal.remove();
-      const resources = await getResources(projectId);
-      renderResources(resources);
       showToast('Resource added!');
     } catch (err) {
-      showToast('Failed to add resource.', 'error');
+      showToast(describeError(err, 'Failed to add resource.'), 'error');
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Add Resource';
+      return;
     }
+    await refreshList(() => getResources(projectId), renderResources, 'resources-list', 'resources');
   };
 }
 
 window.delResource = async (id) => {
   const ok = await confirmAction('Delete this resource?');
   if (!ok) return;
-  await deleteResource(id, projectId);
-  const resources = await getResources(projectId);
-  renderResources(resources);
-  showToast('Deleted.');
+  try {
+    await deleteResource(id, projectId);
+    showToast('Deleted.');
+  } catch (err) {
+    showToast(describeError(err, 'Failed to delete resource.'), 'error');
+    return;
+  }
+  await refreshList(() => getResources(projectId), renderResources, 'resources-list', 'resources');
 };
 
 // ============================================================
@@ -655,30 +700,36 @@ let existingReviewId   = null;
 async function loadReviews() {
   showLoading('reviews-list');
 
-  try {
-    const reviews = await getReviews(projectId);
-    renderReviews(reviews);
+  // Show the review form for members first — it must appear even if
+  // the reviews list fails to load for some reason.
+  const reviewForm = document.getElementById('review-form-section');
+  if (reviewForm) reviewForm.classList.toggle('hidden', !isMember);
 
-    // Check if current user already left a review
-    const myReview = await getUserReview(projectId, currentUser.uid);
+  let reviews = [];
+  try {
+    reviews = await getReviews(projectId);
+    renderReviews(reviews);
+  } catch (err) {
+    showEmpty('reviews-list', 'Could not load reviews.', describeError(err, ''));
+  }
+
+  if (isMember) {
+    // Reuse the list we already fetched instead of querying again
+    const myReview = reviews.find(r => r.createdBy === currentUser.uid) || null;
     existingReviewId = myReview?.id || null;
 
-    // Show review form only if user is a member
-    const reviewForm = document.getElementById('review-form-section');
-    if (reviewForm) {
-      reviewForm.classList.toggle('hidden', !isMember);
-      if (isMember) {
-        // Pre-fill if editing existing review
-        if (myReview) {
-          document.getElementById('review-text').value = myReview.content;
-          selectedReviewTags = myReview.tags || [];
-          document.getElementById('review-submit-btn').textContent = 'Update Review';
-        }
-        renderTagSelector();
-      }
+    const textEl = document.getElementById('review-text');
+    const btnEl  = document.getElementById('review-submit-btn');
+    if (myReview) {
+      if (textEl) textEl.value = myReview.content || '';
+      selectedReviewTags = myReview.tags || [];
+      if (btnEl) btnEl.textContent = 'Update Review';
+    } else {
+      if (textEl) textEl.value = '';
+      selectedReviewTags = [];
+      if (btnEl) btnEl.textContent = 'Submit Review';
     }
-  } catch (err) {
-    showEmpty('reviews-list', 'Could not load reviews.');
+    renderTagSelector();
   }
 
   // Use onclick so revisiting the tab doesn't stack up listeners
@@ -719,23 +770,29 @@ async function submitReview() {
   const content = document.getElementById('review-text')?.value.trim();
   if (!content) { showToast('Write your review first.', 'error'); return; }
 
+  const btn = document.getElementById('review-submit-btn');
+  const original = btn?.textContent;
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
   try {
     if (existingReviewId) {
       await updateReview(existingReviewId, { content, tags: selectedReviewTags });
       showToast('Review updated!');
     } else {
-      const newId = await createReview(projectId, content, selectedReviewTags, currentUser.uid, userData.fullName);
       // Save the new ID so the next submit becomes an update, not a second create
-      existingReviewId = newId;
-      const btn = document.getElementById('review-submit-btn');
-      if (btn) btn.textContent = 'Update Review';
+      existingReviewId = await createReview(
+        projectId, content, selectedReviewTags, currentUser.uid, userData.fullName
+      );
       showToast('Review submitted!');
     }
-    const reviews = await getReviews(projectId);
-    renderReviews(reviews);
   } catch (err) {
-    showToast('Failed to save review.', 'error');
+    showToast(describeError(err, 'Failed to save review.'), 'error');
+    if (btn) { btn.disabled = false; btn.textContent = original; }
+    return;
   }
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Update Review'; }
+  await refreshList(() => getReviews(projectId), renderReviews, 'reviews-list', 'reviews');
 }
 
 function renderReviews(reviews) {
@@ -754,11 +811,11 @@ function renderReviews(reviews) {
           ${(r.createdByName || 'U').charAt(0).toUpperCase()}
         </div>
         <div>
-          <p class="font-semibold text-slate-800 text-sm">${r.createdByName || 'Anonymous'}</p>
+          <p class="font-semibold text-slate-800 text-sm">${escapeHtml(r.createdByName) || 'Anonymous'}</p>
           <p class="text-xs text-slate-400">${formatDate(r.createdAt)}</p>
         </div>
       </div>
-      <p class="text-sm text-slate-600 mb-3 whitespace-pre-wrap">${r.content}</p>
+      <p class="text-sm text-slate-600 mb-3 whitespace-pre-wrap">${escapeHtml(r.content)}</p>
       <div class="flex flex-wrap gap-1">
         ${(r.tags || []).map(tagBadge).join('')}
       </div>

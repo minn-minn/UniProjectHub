@@ -205,6 +205,33 @@ After setting up admin, go to **Metadata Management** and add:
 
 ---
 
+## 🩺 Troubleshooting
+
+### "Failed to add…" on Timeline / Notes / Resources / Reviews
+**Cause:** these four tabs used Firestore queries that combined
+`where('projectId','==',id)` with `orderBy('createdAt')`. Firestore treats
+that as a *compound query* and refuses to run it unless a matching
+**composite index** exists in the Firebase console — it throws a
+`failed-precondition` error instead.
+
+The write itself succeeded, but the read-back that ran immediately after
+it crashed, so the `catch` block fired and showed "Failed to add…" while
+the list stayed empty. The data was actually in Firestore the whole time.
+
+**Fix (already applied):** `js/firestore.js` now fetches with the equality
+filter only — which Firestore always allows via its automatic single-field
+indexes — and sorts the results in JavaScript (`sortByTime` / `sortByName`).
+No console setup, no `firestore.indexes.json`, no deploy step required.
+
+### Still seeing errors?
+Open the browser console (F12). Error toasts now include the real Firebase
+reason instead of a generic message:
+- `permission-denied` → your Firestore rules expired (Test Mode lasts 30 days).
+  Go to **Firestore → Rules** and republish.
+- `unauthenticated` → log out and log back in.
+
+---
+
 ## 🔬 How the Similarity Engine Works
 
 Located in `js/similarity.js`:

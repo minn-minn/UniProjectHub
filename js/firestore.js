@@ -8,11 +8,62 @@
 import {
   collection, doc,
   addDoc, setDoc, getDoc, getDocs, updateDoc, deleteDoc,
-  query, where, orderBy, limit,
+  query, where,
   serverTimestamp, arrayUnion, arrayRemove, increment
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 import { db } from './firebase.js';
+
+// ============================================================
+// SORTING HELPERS
+// ============================================================
+// IMPORTANT — why we do NOT use Firestore orderBy() here:
+//
+// A query that combines where('projectId','==',x) with
+// orderBy('createdAt') is a COMPOUND query. Firestore refuses to
+// run it unless a composite index has been created in the console,
+// and it throws a "failed-precondition / requires an index" error.
+//
+// That error is what made Timeline / Notes / Resources / Reviews
+// say "Failed to add..." and show nothing — the write succeeded,
+// but the read-back that follows it crashed.
+//
+// Fix: fetch with the equality filter only (always allowed, no
+// index needed) and sort in JavaScript instead. Datasets here are
+// per-project and small, so this is fast and needs zero setup.
+// ============================================================
+
+// Firestore Timestamp -> milliseconds. Handles Date, ISO string,
+// and a serverTimestamp() that has not resolved yet (returns 0).
+function toMillis(value) {
+  if (!value) return 0;
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  if (typeof value.toDate === 'function') return value.toDate().getTime();
+  if (typeof value.seconds === 'number') return value.seconds * 1000;
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? 0 : d.getTime();
+}
+
+// Sort an array of docs by a timestamp field
+function sortByTime(list, field = 'createdAt', direction = 'desc') {
+  return list.sort((a, b) => direction === 'asc'
+    ? toMillis(a[field]) - toMillis(b[field])
+    : toMillis(b[field]) - toMillis(a[field]));
+}
+
+// Sort an array of docs alphabetically by name
+function sortByName(list) {
+  return list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+}
+
+// Read a whole collection with optional equality filters, no orderBy
+async function fetchWhere(colName, filters = {}) {
+  const constraints = Object.entries(filters)
+    .filter(([, v]) => v !== undefined && v !== null && v !== '')
+    .map(([field, value]) => where(field, '==', value));
+  const snap = await getDocs(query(collection(db, colName), ...constraints));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
 
 // ============================================================
 // USERS
@@ -97,40 +148,28 @@ export async function getProject(projectId) {
 
 // Get all projects (for Browse page)
 export async function getAllProjects(filters = {}) {
-  let q = collection(db, 'projects');
-  const constraints = [orderBy('createdAt', 'desc')];
-
-  // Apply filters if provided
-  if (filters.department) constraints.unshift(where('department', '==', filters.department));
-  if (filters.batch)      constraints.unshift(where('batch',      '==', filters.batch));
-  if (filters.labGroup)   constraints.unshift(where('labGroup',   '==', filters.labGroup));
-  if (filters.category)   constraints.unshift(where('category',   '==', filters.category));
-
-  const snap = await getDocs(query(q, ...constraints));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const projects = await fetchWhere('projects', {
+    department: filters.department,
+    batch:      filters.batch,
+    labGroup:   filters.labGroup,
+    category:   filters.category
+  });
+  return sortByTime(projects, 'createdAt', 'desc');
 }
 
 // Get projects where the user is a member
 export async function getUserProjects(uid) {
   // Firestore can't query inside arrays of objects, so we load
   // all projects and filter by member uid locally.
-  const snap = await getDocs(
-    query(collection(db, 'projects'), orderBy('updatedAt', 'desc'))
-  );
-  return snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .filter(p => p.members?.some(m => m.uid === uid));
+  const projects = await fetchWhere('projects');
+  const mine = projects.filter(p => p.members?.some(m => m.uid === uid));
+  return sortByTime(mine, 'updatedAt', 'desc');
 }
 
 // Get recent projects from a department (for Dashboard)
 export async function getRecentByDepartment(department, count = 6) {
-  const snap = await getDocs(query(
-    collection(db, 'projects'),
-    where('department', '==', department),
-    orderBy('createdAt', 'desc'),
-    limit(count)
-  ));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const projects = await fetchWhere('projects', { department });
+  return sortByTime(projects, 'createdAt', 'desc').slice(0, count);
 }
 
 // Get all projects (for similarity engine and analytics)
@@ -171,12 +210,8 @@ export async function removeMember(projectId, member) {
 
 // Get all activities for a project, oldest first
 export async function getActivities(projectId) {
-  const snap = await getDocs(query(
-    collection(db, 'activityTimeline'),
-    where('projectId', '==', projectId),
-    orderBy('createdAt', 'asc')
-  ));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const activities = await fetchWhere('activityTimeline', { projectId });
+  return sortByTime(activities, 'createdAt', 'asc');
 }
 
 // Add a new activity
@@ -219,12 +254,8 @@ export async function recalcProgress(projectId) {
 // ============================================================
 
 export async function getNotes(projectId) {
-  const snap = await getDocs(query(
-    collection(db, 'notes'),
-    where('projectId', '==', projectId),
-    orderBy('createdAt', 'desc')
-  ));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const notes = await fetchWhere('notes', { projectId });
+  return sortByTime(notes, 'createdAt', 'desc');
 }
 
 export async function createNote(projectId, title, content, creatorUid, creatorName) {
@@ -255,12 +286,8 @@ export async function deleteNote(noteId) {
 // ============================================================
 
 export async function getResources(projectId) {
-  const snap = await getDocs(query(
-    collection(db, 'resources'),
-    where('projectId', '==', projectId),
-    orderBy('createdAt', 'desc')
-  ));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const resources = await fetchWhere('resources', { projectId });
+  return sortByTime(resources, 'createdAt', 'desc');
 }
 
 export async function createResource(projectId, data, creatorUid, creatorName) {
@@ -274,19 +301,22 @@ export async function createResource(projectId, data, creatorUid, creatorName) {
     createdByName: creatorName,
     createdAt:     serverTimestamp()
   });
-  // Increment resource count atomically (safe even with multiple users at once)
-  await updateDoc(doc(db, 'projects', projectId), {
-    resourceCount: increment(1)
-  });
+  // Counter is cosmetic — never let it fail the whole "add resource" action
+  try {
+    await updateDoc(doc(db, 'projects', projectId), { resourceCount: increment(1) });
+  } catch (err) {
+    console.warn('resourceCount not updated:', err);
+  }
   return ref.id;
 }
 
 export async function deleteResource(resourceId, projectId) {
   await deleteDoc(doc(db, 'resources', resourceId));
-  // Decrement atomically, but never go below 0
-  await updateDoc(doc(db, 'projects', projectId), {
-    resourceCount: increment(-1)
-  });
+  try {
+    await updateDoc(doc(db, 'projects', projectId), { resourceCount: increment(-1) });
+  } catch (err) {
+    console.warn('resourceCount not updated:', err);
+  }
 }
 
 // ============================================================
@@ -294,24 +324,14 @@ export async function deleteResource(resourceId, projectId) {
 // ============================================================
 
 export async function getReviews(projectId) {
-  const snap = await getDocs(query(
-    collection(db, 'finalReviews'),
-    where('projectId', '==', projectId),
-    orderBy('createdAt', 'desc')
-  ));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const reviews = await fetchWhere('finalReviews', { projectId });
+  return sortByTime(reviews, 'createdAt', 'desc');
 }
 
 // Find the review left by a specific user on a project
 export async function getUserReview(projectId, uid) {
-  const snap = await getDocs(query(
-    collection(db, 'finalReviews'),
-    where('projectId', '==', projectId),
-    where('createdBy', '==', uid)
-  ));
-  if (snap.empty) return null;
-  const d = snap.docs[0];
-  return { id: d.id, ...d.data() };
+  const reviews = await getReviews(projectId);
+  return reviews.find(r => r.createdBy === uid) || null;
 }
 
 export async function createReview(projectId, content, tags, creatorUid, creatorName) {
@@ -323,10 +343,12 @@ export async function createReview(projectId, content, tags, creatorUid, creator
     createdByName: creatorName,
     createdAt:     serverTimestamp()
   });
-  // Increment review count atomically
-  await updateDoc(doc(db, 'projects', projectId), {
-    reviewCount: increment(1)
-  });
+  // Counter is cosmetic — never let it fail the whole "submit review" action
+  try {
+    await updateDoc(doc(db, 'projects', projectId), { reviewCount: increment(1) });
+  } catch (err) {
+    console.warn('reviewCount not updated:', err);
+  }
   return ref.id;
 }
 
@@ -339,10 +361,7 @@ export async function updateReview(reviewId, fields) {
 // ============================================================
 
 export async function getBatches() {
-  const snap = await getDocs(query(
-    collection(db, 'batches'), orderBy('name', 'asc')
-  ));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return sortByName(await fetchWhere('batches'));
 }
 
 export async function createBatch(name) {
@@ -362,11 +381,7 @@ export async function deleteBatch(id) {
 // ── Lab Groups ───────────────────────────────────────────────
 
 export async function getLabGroups(batchId = null) {
-  let q = collection(db, 'labGroups');
-  const constraints = [orderBy('name', 'asc')];
-  if (batchId) constraints.unshift(where('batchId', '==', batchId));
-  const snap = await getDocs(query(q, ...constraints));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return sortByName(await fetchWhere('labGroups', { batchId }));
 }
 
 export async function createLabGroup(name, batchId) {
@@ -385,10 +400,7 @@ export async function deleteLabGroup(id) {
 
 // Generic helpers for simple name-only collections
 async function getMetaCollection(colName) {
-  const snap = await getDocs(query(
-    collection(db, colName), orderBy('name', 'asc')
-  ));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return sortByName(await fetchWhere(colName));
 }
 
 async function addMeta(colName, name) {

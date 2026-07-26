@@ -116,6 +116,37 @@ export function isValidUrl(url) {
   }
 }
 
+// ── HTML Escaping ────────────────────────────────────────────
+// User-typed text (note titles, activity names, review text) is
+// inserted with innerHTML. Without escaping, a stray < or " can
+// break the surrounding markup and make the item render blank.
+export function escapeHtml(text) {
+  if (text === null || text === undefined) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ── Error Messages ───────────────────────────────────────────
+// Turns a Firebase error into something a human can act on,
+// and always logs the raw error to the console for debugging.
+export function describeError(err, fallback = 'Something went wrong.') {
+  console.error(err);
+  const code = err?.code || '';
+  if (code.includes('permission-denied'))
+    return 'Permission denied — check your Firestore security rules.';
+  if (code.includes('failed-precondition'))
+    return 'Database query needs an index. Check the console for the fix link.';
+  if (code.includes('unavailable') || code.includes('network'))
+    return 'Network problem — check your connection and try again.';
+  if (code.includes('unauthenticated'))
+    return 'You are signed out. Please log in again.';
+  return err?.message ? `${fallback} (${err.message})` : fallback;
+}
+
 // ── Text Helpers ─────────────────────────────────────────────
 // Shorten long text with "..."
 export function truncate(text, maxLength = 120) {
