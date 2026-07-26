@@ -8,6 +8,10 @@ import { showToast, renderSidebarUser, getAvatarColor, formatDate } from './util
 let currentUser = null;
 let userData    = null;
 
+// Cached at load time so filtering is instant and needs no extra Firestore reads
+let _allGroups  = [];                 // every lab group document
+const _batchMap = new Map();          // batch name → batch document ID
+
 // ── Start ────────────────────────────────────────────────────
 async function init() {
   try {
@@ -18,7 +22,7 @@ async function init() {
     document.getElementById('logout-btn').addEventListener('click', logoutUser);
 
     renderProfile();
-    await loadBatchOptions();
+    await loadBatchAndGroupData();    // load both at once
     setupEditForm();
     setupEditToggle();
   } catch (err) {
@@ -39,17 +43,17 @@ function renderProfile() {
   }
 
   // Fields
-  setValue('profile-name',       userData.fullName     || '—');
-  setValue('profile-id',         userData.universityId || '—');
-  setValue('profile-email',      userData.email        || '—');
-  setValue('profile-dept',       userData.department   || '—');
-  setValue('profile-batch',      userData.batch        || '—');
-  setValue('profile-group',      userData.labGroup     || '—');
-  setValue('profile-joined',     formatDate(userData.createdAt));
+  setValue('profile-name',   userData.fullName     || '—');
+  setValue('profile-id',     userData.universityId || '—');
+  setValue('profile-email',  userData.email        || '—');
+  setValue('profile-dept',   userData.department   || '—');
+  setValue('profile-batch',  userData.batch        || '—');
+  setValue('profile-group',  userData.labGroup     || '—');
+  setValue('profile-joined', formatDate(userData.createdAt));
 
   // Pre-fill edit form
-  setInput('edit-name',    userData.fullName     || '');
-  setInput('edit-dept',    userData.department   || '');
+  setInput('edit-name', userData.fullName  || '');
+  setInput('edit-dept', userData.department || '');
 }
 
 function setValue(id, value) {
@@ -62,50 +66,80 @@ function setInput(id, value) {
   if (el) el.value = value;
 }
 
-// ── Load Batch Options for Edit Form ─────────────────────────
-async function loadBatchOptions() {
+// ── Load Batches AND Groups Together ─────────────────────────
+// Both are loaded once. Groups are filtered client-side from _allGroups
+// so switching batch is instant with no extra Firestore reads.
+async function loadBatchAndGroupData() {
   try {
-    const batches = await getBatches();
+    // Load both in parallel
+    const [batches, groups] = await Promise.all([getBatches(), getLabGroups()]);
+
+    // Cache all groups
+    _allGroups = groups;
+
+    // Build name → id map for batches
+    // (lab group documents store batchId = the batch document ID, not batch name)
+    _batchMap.clear();
+    batches.forEach(b => _batchMap.set(b.name, b.id));
+
+    // Populate batch dropdown
     const batchSel = document.getElementById('edit-batch');
     if (!batchSel) return;
 
     batches.forEach(b => {
       const opt = document.createElement('option');
-      opt.value = b.name;
+      opt.value       = b.name;
       opt.textContent = b.name;
       if (b.name === userData.batch) opt.selected = true;
       batchSel.appendChild(opt);
     });
 
-    // When batch changes, reload lab groups
-    batchSel.addEventListener('change', () => loadGroupOptions(batchSel.value));
+    // When batch changes → filter groups for that batch only
+    batchSel.addEventListener('change', () => {
+      renderGroupOptions(batchSel.value, ''); // clear current group selection
+    });
 
-    // Load groups for current batch
-    if (userData.batch) loadGroupOptions(userData.batch);
+    // Show groups for the user's current batch on page load
+    renderGroupOptions(userData.batch || '', userData.labGroup || '');
+
   } catch (err) {
-    console.error('Batch options error:', err);
+    console.error('Batch/group load error:', err);
   }
 }
 
-async function loadGroupOptions(batchName) {
-  try {
-    const groups  = await getLabGroups();
-    const groupSel = document.getElementById('edit-group');
-    if (!groupSel) return;
+// ── Render Group Dropdown (client-side filter) ────────────────
+// batchName  — the batch name currently selected in the batch dropdown
+// selectValue — which group to pre-select ('' means none)
+function renderGroupOptions(batchName, selectValue) {
+  const groupSel = document.getElementById('edit-group');
+  if (!groupSel) return;
 
-    // Keep only placeholder
-    groupSel.innerHTML = '<option value="">Select Group</option>';
+  // Always start fresh with the placeholder
+  groupSel.innerHTML = '<option value="">Select Group</option>';
 
-    groups.forEach(g => {
-      const opt = document.createElement('option');
-      opt.value = g.name;
-      opt.textContent = g.name;
-      if (g.name === userData.labGroup) opt.selected = true;
-      groupSel.appendChild(opt);
-    });
-  } catch (err) {
-    console.error('Group options error:', err);
+  if (!batchName) return; // no batch chosen yet → leave dropdown empty
+
+  // Look up the document ID for the selected batch
+  const batchId = _batchMap.get(batchName);
+
+  // Filter from the cached list — only groups belonging to this batch
+  const filtered = _allGroups.filter(g => g.batchId === batchId);
+
+  if (filtered.length === 0) {
+    const opt = document.createElement('option');
+    opt.disabled     = true;
+    opt.textContent  = 'No groups for this batch';
+    groupSel.appendChild(opt);
+    return;
   }
+
+  filtered.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value       = g.name;
+    opt.textContent = g.name;
+    if (g.name === selectValue) opt.selected = true;
+    groupSel.appendChild(opt);
+  });
 }
 
 // ── Toggle Edit Form ──────────────────────────────────────────
